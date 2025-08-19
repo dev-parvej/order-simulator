@@ -1,6 +1,6 @@
 import React from "react";
 import { format } from "date-fns";
-import { IOrderHistory, OrderStatus, orderStatusLabel, orderTypeLabel } from "../../@types/order";
+import { IOrderHistory, OrderStatus, orderStatusLabel, orderTypeLabel, SettlementStatus, settlementStatusLabel } from "../../@types/order";
 
 export interface OrderHistoryProps {
     data: IOrderHistory[];
@@ -23,6 +23,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ data, onHistoryItemCancelCl
                         <th className="py-3 font-medium border border-slate-500 min-w-48 hidden sm:table-cell">Order Time</th>
                         <th className="py-3 font-medium border border-slate-500 hidden lg:table-cell">Filled Time</th>
                         <th className="py-3 font-medium border border-slate-500">Status</th>
+                        <th className="py-3 font-medium border border-slate-500 hidden xl:table-cell">Settlement</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,6 +51,45 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ data, onHistoryItemCancelCl
                                     <div className="bg-yellow-900 px-2 xl:w-24 py-1 rounded-full inline-block">{orderStatusLabel[item.status as number]}</div>
                                 ) : (
                                     <div className="bg-green-900 px-2 xl:w-24 py-1 rounded-full inline-block">{orderStatusLabel[item.status as number]}</div>
+                                )}
+                            </td>
+                            <td className="py-2 px-4 border border-slate-500 hidden xl:table-cell">
+                                {item.status === OrderStatus.Filled && item.settlementStatus !== undefined ? (
+                                    <div className="space-y-1">
+                                        <div className={`px-2 py-1 rounded-full text-xs inline-block ${
+                                            item.settlementStatus === SettlementStatus.Settled ? 'bg-green-900' :
+                                            item.settlementStatus === SettlementStatus.Settling ? 'bg-yellow-900' :
+                                            item.settlementStatus === SettlementStatus.Failed ? 'bg-red-900' :
+                                            'bg-gray-900'
+                                        }`}>
+                                            {settlementStatusLabel[item.settlementStatus]}
+                                        </div>
+                                        {item.transactionHash && (
+                                            <div>
+                                                <a
+                                                    href={`https://sepolia.etherscan.io/tx/${item.transactionHash}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-400 hover:text-blue-300 text-xs"
+                                                    title={item.transactionHash}
+                                                >
+                                                    {item.transactionHash.substring(0, 8)}...
+                                                </a>
+                                            </div>
+                                        )}
+                                        {item.settlementError && (
+                                            <div 
+                                                className="text-red-400 text-xs cursor-help"
+                                                title={item.settlementError}
+                                            >
+                                                Error
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : item.status === OrderStatus.Filled ? (
+                                    <div className="text-gray-500 text-xs">Off-chain only</div>
+                                ) : (
+                                    <div className="text-gray-600 text-xs">-</div>
                                 )}
                             </td>
                         </tr>

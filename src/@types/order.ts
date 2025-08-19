@@ -30,12 +30,25 @@ export enum OrderStatus {
 
 export const orderStatusLabel = ["Pending", "Filled", "Cancelled"];
 
+export enum SettlementStatus {
+    NotSettled,
+    Settling,
+    Settled,
+    Failed,
+}
+
+export const settlementStatusLabel = ["Not Settled", "Settling...", "Settled", "Failed"];
+
 export interface IOrderHistory {
     _id: string;
     order: IOrder;
     created: Date;
     completed?: Date;
     status: OrderStatus;
+    transactionHash?: string;
+    settlementStatus?: SettlementStatus;
+    settlementDate?: Date;
+    settlementError?: string;
 }
 
 export interface IOrderAdd {

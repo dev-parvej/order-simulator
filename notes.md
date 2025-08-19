@@ -1,0 +1,1 @@
+also we will have customer A and customer B. Customer A  only buys, customer B only sells. They are not limited to this actions only ( both can buy and sell) but in this case only A buys and B sells. They trade same cryptocurrency of your choice. They use only 1 network of your choice. Metamask wallets. No 2step verification required, just connect wallets

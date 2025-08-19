@@ -14,6 +14,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import WalletConnect from "./components/wallet-connect/WalletConnect.jsx";
+import BalanceDisplay from "./components/custom/BalanceDisplay";
+import DepositWithdraw from "./components/custom/DepositWithdraw";
 
 function App() {
     const [symbolIndex, setSymbolIndex] = useState(0);
@@ -25,10 +27,13 @@ function App() {
     const currentSymbol = useSelector((state: IStoreState) => state.currentSymbol);
     const currentSymbolPrice = useSelector((state: IStoreState) => state.currentSymbolPrice);
     const orderHistory = useSelector((state: IStoreState) => state.orders);
+    const [ user, setUser ] = useState<string>('')
+    const [ walletAddress, setWalletAddress ] = useState<string>('')
+
     const dispatch = useDispatch();
 
     useEffect(() => {
-        const eventSource: EventSource = new EventSource("https://order-balance-simulation.onrender.com/live/");
+        const eventSource: EventSource = new EventSource("http://localhost:3000/live/");
         eventSource.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data == true) {
@@ -39,10 +44,16 @@ function App() {
         getOrderHistory();
 
         return () => eventSource.close();
-    }, []);
+    }, [user]);
 
     const addOrder = async ({ type, symbol, price, quantity, total, status }: IOrderAdd) => {
-        await axios.post("https://order-balance-simulation.onrender.com/order", { type, symbol, price, quantity, total, status });
+        console.log(user, walletAddress);
+
+        if (!user || !walletAddress) {
+            toast.error('User or the wallet is missing');
+            return;
+        }
+        await axios.post("http://localhost:3000/orders", { type, symbol, price, quantity, total, status, customerType: user, walletAddress });
         if (type === OrderType.BuyMarket || type === OrderType.SellMarktet) {
             toast.success("Successfully Filled!", { position: "top-center" });
         }
@@ -50,7 +61,10 @@ function App() {
     };
 
     const getOrderHistory = async () => {
-        const result = await axios.get("https://order-balance-simulation.onrender.com/order");
+        if(!user) {
+            return;
+        }
+        const result = await axios.get('http://localhost:3000/orders/'+user);
         if (result.status === 200) {
             const data = result.data as [any];
             const orders = data.reverse().map((item) => {
@@ -59,6 +73,10 @@ function App() {
                     created: item.created,
                     status: item.status,
                     completed: item.completed,
+                    transactionHash: item.transactionHash,
+                    settlementStatus: item.settlementStatus,
+                    settlementDate: item.settlementDate,
+                    settlementError: item.settlementError,
                     order: { price: item.price, quantity: item.quantity, total: item.total, type: item.type, symbol: item.symbol },
                 } as IOrderHistory;
             });
@@ -67,7 +85,7 @@ function App() {
     };
 
     const cancelOrder = async (id: string) => {
-        const result = await axios.get(`https://order-balance-simulation.onrender.com/order/cancel/${id}`);
+        const result = await axios.get(`http://localhost:3000/orders/cancel/${id}`);
         if (result.status === 200) {
             if (result.data === true) {
                 toast.success("Successfully Canceled!", { position: "top-center" });
@@ -82,7 +100,9 @@ function App() {
                 <div className="container mx-auto">
                     <div className="flex justify-between items-center">
                         <h2 className="text-2xl text-left">Order Trading Platform</h2>
-                        <WalletConnect />
+                        <WalletConnect setWalletId={(address: string) => {
+                            setWalletAddress(address);
+                        }} />
                     </div>
                     <div className="flex flex-wrap flex-col justify-between items-center gap-4 mt-4 xl:flex-row">
                         <Select
@@ -98,29 +118,33 @@ function App() {
                             })}
                             value={symbolIndex}
                         ></Select>
-                        <div className="flex-grow"></div>
-                        <span className="text-gray-500 ">Input your balance:</span>
-                        <TextInputField
-                            prefix="Balance"
-                            type="number"
-                            suffix={tokenA}
-                            value={balance1}
-                            onChange={(value) => {
-                                dispatch(setBalance1(parseFloat(value as string)));
-                            }}
+                        <div className="flex gap-4 items-center">
+                            <span className="text-gray-400 whitespace-nowrap">Customer Type:</span>
+                            <Select
+                                onChange={(value: string) => setUser(value)}
+                                options={[
+                                    { label: "Customer A (Buyer)", value: "A" },
+                                    { label: "Customer B (Seller)", value: "B" }
+                                ]}
+                                value={user}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Balance Display */}
+                    <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <BalanceDisplay 
+                            walletAddress={walletAddress} 
+                            customerType={user as 'A' | 'B'} 
                         />
-                        <TextInputField
-                            prefix="Balance"
-                            type="number"
-                            suffix={tokenB}
-                            value={balance2}
-                            onChange={(value) => {
-                                dispatch(setBalace2(parseFloat(value as string)));
-                            }}
+                        <DepositWithdraw 
+                            walletAddress={walletAddress} 
+                            customerType={user as 'A' | 'B'} 
                         />
                     </div>
+                    
                     <div className="flex flex-row py-2 justify-end items-start text-gray-500">
-                        <h4 className="pr-16">This website is test website and all of data is mock data. Please be aware of it.</h4>
+                        <h4 className="pr-16">ETH/USDT Trading Simulation - Connect wallet and select customer type</h4>
                     </div>
                     <div className="flex justify-between items-center flex-col-reverse xl:flex-row xl:items-start gap-4">
                         <div className="w-full xl:flex-1">
@@ -153,7 +177,7 @@ function App() {
                                                                 return price > 0 && quantity > 0 && price * quantity < balance2;
                                                             }}
                                                             onSubmitted={(price: number, quantity: number) => {
-                                                                addOrder({ type: OrderType.BuyLimit, price, quantity, total: price * quantity, status: OrderStatus.Pending, symbol: currentSymbol.symbol });
+                                                                addOrder({ type: OrderType.BuyLimit, price: Number(price), quantity: Number(quantity), total: price * quantity, status: OrderStatus.Pending, symbol: currentSymbol.symbol });
                                                             }}
                                                             customStyle={colorVariants.blue}
                                                         ></MakeOrder>
@@ -169,7 +193,7 @@ function App() {
                                                                 return price > 0 && quantity > 0 && quantity < balance1;
                                                             }}
                                                             onSubmitted={(price: number, quantity: number) => {
-                                                                addOrder({ type: OrderType.SellLimit, price, quantity, total: price * quantity, status: OrderStatus.Pending, symbol: currentSymbol.symbol });
+                                                                addOrder({ type: OrderType.SellLimit, price: Number(price), quantity: Number(quantity), total: price * quantity, status: OrderStatus.Pending, symbol: currentSymbol.symbol });
                                                             }}
                                                             customStyle={colorVariants.red}
                                                         ></MakeOrder>
@@ -192,7 +216,7 @@ function App() {
                                                                 return price > 0 && quantity > 0 && price * quantity < balance2;
                                                             }}
                                                             onSubmitted={(price: number, quantity: number) => {
-                                                                addOrder({ type: OrderType.BuyMarket, price, quantity, total: price * quantity, status: OrderStatus.Filled, symbol: currentSymbol.symbol });
+                                                                addOrder({ type: OrderType.BuyMarket, price: Number(price), quantity: Number(quantity), total: price * quantity, status: OrderStatus.Filled, symbol: currentSymbol.symbol });
                                                             }}
                                                             customStyle={colorVariants.blue}
                                                         ></MakeOrder>
@@ -208,7 +232,7 @@ function App() {
                                                                 return price > 0 && quantity > 0 && quantity < balance1;
                                                             }}
                                                             onSubmitted={(price: number, quantity: number) => {
-                                                                addOrder({ type: OrderType.SellMarktet, price, quantity, total: price * quantity, status: OrderStatus.Filled, symbol: currentSymbol.symbol });
+                                                                addOrder({ type: OrderType.SellMarktet, price: Number(price), quantity: Number(quantity), total: price * quantity, status: OrderStatus.Filled, symbol: currentSymbol.symbol });
                                                             }}
                                                             customStyle={colorVariants.red}
                                                         ></MakeOrder>
@@ -225,7 +249,9 @@ function App() {
                         <OrderHistory
                             data={orderHistory}
                             onHistoryItemCancelClicked={(cancelId: string) => {
-                                cancelOrder(cancelId);
+                                if (confirm('Do you really want cancel this order?')) {
+                                    cancelOrder(cancelId);
+                                }
                             }}
                         ></OrderHistory>
                     </div>
