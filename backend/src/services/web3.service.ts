@@ -30,12 +30,18 @@ export class Web3Service {
 
   private initializeProvider() {
     try {
+      if (!this.PRIVATE_KEY) {
+        this.logger.warn('No private key provided, Web3 functionality will be limited');
+        return;
+      }
+
       this.provider = new ethers.JsonRpcProvider(this.RPC_URL);
       this.wallet = new ethers.Wallet(this.PRIVATE_KEY, this.provider);
       this.logger.log('Web3 provider initialized successfully');
     } catch (error) {
       this.logger.error('Failed to initialize Web3 provider', error);
-      throw error;
+      this.logger.warn('Web3 functionality will be disabled');
+      // Don't throw error to allow app to start
     }
   }
 
@@ -43,6 +49,11 @@ export class Web3Service {
     try {
       if (!this.CONTRACT_ADDRESS) {
         this.logger.warn('Contract address not provided, some functions will be disabled');
+        return;
+      }
+
+      if (!this.wallet) {
+        this.logger.warn('Wallet not initialized, contract functions will be disabled');
         return;
       }
 
@@ -55,7 +66,8 @@ export class Web3Service {
       this.logger.log(`Contract initialized at address: ${this.CONTRACT_ADDRESS}`);
     } catch (error) {
       this.logger.error('Failed to initialize contract', error);
-      throw error;
+      this.logger.warn('Contract functions will be disabled');
+      // Don't throw error to allow app to start
     }
   }
 
