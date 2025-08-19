@@ -6,7 +6,7 @@ interface DepositWithdrawProps {
   customerType: 'A' | 'B';
 }
 
-const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS || '';
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '';
 const USDT_TOKEN_ADDRESS = '0x7169D38820dfd117C3FA1f22a697dBA58d90BA06'; // Sepolia USDT
 
 // Contract ABI for the functions we need

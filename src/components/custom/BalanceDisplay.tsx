@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
 interface BalanceInfo {
   walletAddress: string;
   ethBalance: string;
@@ -26,7 +28,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ walletAddress, customer
     setError(null);
     
     try {
-      const response = await axios.get(`http://localhost:3000/balance/${walletAddress}`);
+      const response = await axios.get(`${API_BASE_URL}/balance/${walletAddress}`);
       setBalance(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch balance');
@@ -43,7 +45,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ walletAddress, customer
     setError(null);
     
     try {
-      const response = await axios.post('http://localhost:3000/balance/refresh', {
+      const response = await axios.post(`${API_BASE_URL}/balance/refresh`, {
         walletAddress
       });
       setBalance(response.data);

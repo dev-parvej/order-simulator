@@ -1,12 +1,7 @@
 import { Controller, Get, Post, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { BalanceService, BalanceInfo } from '../services/balance.service';
-
-export class GetBalanceDto {
-  walletAddress: string;
-}
-
 export class RefreshBalanceDto {
-  walletAddress: string;
+  walletAddress!: string;
 }
 
 @Controller('balance')
@@ -38,7 +33,7 @@ export class BalanceController {
     orderQuantity: number;
   }): Promise<{ isValid: boolean; message?: string }> {
     const { customerType, walletAddress, orderTotal, orderQuantity } = body;
-    
+
     try {
       const isValid = await this.balanceService.validateCustomerBalance(
         customerType,
@@ -50,7 +45,7 @@ export class BalanceController {
       if (!isValid) {
         const requiredToken = customerType === 'A' ? 'USDT' : 'ETH';
         const requiredAmount = customerType === 'A' ? orderTotal : orderQuantity;
-        
+
         return {
           isValid: false,
           message: `Insufficient ${requiredToken} balance. Required: ${requiredAmount} ${requiredToken}`

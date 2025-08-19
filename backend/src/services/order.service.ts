@@ -5,11 +5,12 @@ import {OrderResponseDto} from '../dto/order-response.dto';
 import {Order, OrderStatus, OrderType, SettlementStatus} from '../entities/order.entity';
 import {Web3Service} from './web3.service';
 import {BalanceService} from './balance.service';
+import {ObjectLiteral} from "typeorm";
 
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
-  
+
   constructor(
     private readonly orderRepository: OrderRepository,
     private readonly web3Service: Web3Service,
@@ -18,7 +19,7 @@ export class OrderService {
 
   async createOrder(createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
     this.validateOrderData(createOrderDto);
-    
+
     // Validate balance before creating order
     await this.validateBalance(createOrderDto);
 
@@ -123,7 +124,7 @@ export class OrderService {
       ]);
 
       this.logger.log(`Trade settled successfully. TX: ${txHash}`);
-    } catch (error) {
+    } catch (error: any) {
       // Update orders with failed settlement
       buyOrder.settlementStatus = SettlementStatus.Failed;
       buyOrder.settlementError = error.message;

@@ -13,6 +13,8 @@ import { OrderType, IOrderAdd, OrderStatus, IOrderHistory } from "./@types/order
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 import WalletConnect from "./components/wallet-connect/WalletConnect.jsx";
 import BalanceDisplay from "./components/custom/BalanceDisplay";
 import DepositWithdraw from "./components/custom/DepositWithdraw";
@@ -33,7 +35,7 @@ function App() {
     const dispatch = useDispatch();
 
     useEffect(() => {
-        const eventSource: EventSource = new EventSource("http://localhost:3000/live/");
+        const eventSource: EventSource = new EventSource(`${API_BASE_URL}/live/`);
         eventSource.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data == true) {
@@ -53,7 +55,7 @@ function App() {
             toast.error('User or the wallet is missing');
             return;
         }
-        await axios.post("http://localhost:3000/orders", { type, symbol, price, quantity, total, status, customerType: user, walletAddress });
+        await axios.post(`${API_BASE_URL}/orders`, { type, symbol, price, quantity, total, status, customerType: user, walletAddress });
         if (type === OrderType.BuyMarket || type === OrderType.SellMarktet) {
             toast.success("Successfully Filled!", { position: "top-center" });
         }
@@ -64,7 +66,7 @@ function App() {
         if(!user) {
             return;
         }
-        const result = await axios.get('http://localhost:3000/orders/'+user);
+        const result = await axios.get(`${API_BASE_URL}/orders/${user}`);
         if (result.status === 200) {
             const data = result.data as [any];
             const orders = data.reverse().map((item) => {
@@ -85,7 +87,7 @@ function App() {
     };
 
     const cancelOrder = async (id: string) => {
-        const result = await axios.get(`http://localhost:3000/orders/cancel/${id}`);
+        const result = await axios.get(`${API_BASE_URL}/orders/cancel/${id}`);
         if (result.status === 200) {
             if (result.data === true) {
                 toast.success("Successfully Canceled!", { position: "top-center" });
